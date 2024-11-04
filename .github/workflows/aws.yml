@@ -16,7 +16,6 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
-    environment: webgoat-wiz-checkmarx
 
     steps:
     - name: Checkout
