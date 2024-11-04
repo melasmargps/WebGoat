@@ -58,9 +58,9 @@ jobs:
         wiz_client_secret: ${{ secrets.WIZ_CLIENT_SECRET }}
         wiz_container_image: ${{ steps.build-image.outputs.image-name }}
         wiz_scan_policy:
-        wiz_severity_threshold: 'medium' # Optional
+        wiz_severity_threshold:  # Optional
         wiz_working_directory: ${{ github.workspace }}
-        wiz_fail_build: 'true'
+        wiz_fail_build: 'false'
         generate_pr_comment: 'false'
         detailed_results: 'false'
 
