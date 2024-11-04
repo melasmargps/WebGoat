@@ -57,7 +57,7 @@ jobs:
         wiz_client_id: ${{ secrets.WIZ_CLIENT_ID }}
         wiz_client_secret: ${{ secrets.WIZ_CLIENT_SECRET }}
         wiz_container_image: ${{ steps.build-image.outputs.image-name }}
-        wiz_scan_policy: 'Custom Policy if needed' # Optional
+        wiz_scan_policy:
         wiz_severity_threshold: 'medium' # Optional
         wiz_working_directory: ${{ github.workspace }}
         wiz_fail_build: 'true'
