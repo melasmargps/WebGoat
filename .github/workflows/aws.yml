@@ -60,8 +60,8 @@ jobs:
         wiz_severity_threshold: 'medium' # Optional
         wiz_working_directory: ${{ github.workspace }}
         wiz_fail_build: 'true'
-        generate_pr_comment: 'true'
-        detailed_results: 'true'
+        generate_pr_comment: 'false'
+        detailed_results: 'false'
 
     - name: Push image to Amazon ECR
       id: push-image
