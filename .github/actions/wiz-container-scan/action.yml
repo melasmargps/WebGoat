@@ -79,6 +79,8 @@ runs:
 
     #  Run Wiz Container scan
     - name: Wiz Container Scan
+      env:
+        IMAGE_TAG: ${{ github.sha }}
       id: wiz-container-scan
       working-directory: ${{ inputs.wiz_working_directory }}
       continue-on-error: true
@@ -86,6 +88,7 @@ runs:
         set +e
         ./wizcli docker scan --image ${{ inputs.wiz_container_image }} --secrets  --no-color -o result,human,true -o wiz-container-results.json,json,true --policy "${{ inputs.wiz_scan_policy }}" --policy-hits-only ${{ inputs.wiz_additional_arguments }} > wiz-container-results.txt
         exitcode="$?"
+        ./wizcli docker tag --image IMAGE_TAG
         echo "exitcode=$exitcode" >> $GITHUB_OUTPUT
         echo "$exitcode"
         cat wiz-container-results.txt
