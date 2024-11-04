@@ -54,3 +54,17 @@ jobs:
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
         echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+        
+    - name: Run Wiz Container Image Scan
+        uses: ./.github/actions/wiz-container-scan
+        with:
+          wiz_client_id: ${{ secrets.WIZ_CLIENT_ID }}
+          wiz_client_secret: ${{ secrets.WIZ_CLIENT_SECRET }}
+          wiz_container_image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          wiz_scan_policy: 'Custom Policy if needed' # Optional
+          wiz_severity_threshold: 'medium' # Optional
+          wiz_working_directory: ${{ github.workspace }}
+          wiz_fail_build: 'true'
+          generate_pr_comment: 'true'
+          detailed_results: 'true'
+    
