@@ -135,63 +135,63 @@ runs:
         echo "$wiz_container_msg"
       shell: bash
 
-    #  Upload Wiz HTML report
-    - uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
-      name: Upload Scan Report
-      if: ${{ steps.check_vulnerabilities_wiz_container.outputs.fail_workflow == 'true' }}
-      id: upload-wiz_container-report
-      with:
-        name: wiz-scan-results
-        path: |
-          wiz-container-results.json
-          wiz-container-results.txt
-        if-no-files-found: ignore
+    # #  Upload Wiz HTML report
+    # - uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+    #   name: Upload Scan Report
+    #   if: ${{ steps.check_vulnerabilities_wiz_container.outputs.fail_workflow == 'true' }}
+    #   id: upload-wiz_container-report
+    #   with:
+    #     name: wiz-scan-results
+    #     path: |
+    #       wiz-container-results.json
+    #       wiz-container-results.txt
+    #     if-no-files-found: ignore
     #  Create a Job Summary with the scan results
-    - name: Post Summary
-      uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
-      if: ${{inputs.generate_job_summary == 'true' }}
-      env:
-        RESULTS_INPUT_TYPE: ${{ inputs.results_input_type || 'raw' }}
-        RESULTS_RAW: 'FAIL SCAN=${{ steps.check_vulnerabilities_wiz_container.outputs.fail_workflow }}: Scan Results: ${{  steps.wiz-container-scan.outcome }}'
-        RESULTS_FILE: 'wiz-container-results.txt'
-        REPORT_URL: ${{ steps.upload-wiz_container-report.outputs.artifact-url || '' }}
-        SCAN_TOOL: 'Wiz Container'
-        FAIL_WORKFLOW: ${{ steps.check_vulnerabilities_wiz_container.outputs.fail_workflow || '' }}
-        SCAN_MESSAGE: ${{ steps.check_vulnerabilities_wiz_container.outputs.wiz_container_scan_message || '' }}
-        DETAILED_RESULTS: ${{ inputs.detailed_results || 'false' }}
-      with:
-        github-token: ${{ inputs.gh_token || github.token }}
-        script: |
-          const { GITHUB_WORKSPACE, RESULTS_INPUT_TYPE, RESULTS_FILE, RESULTS_RAW, REPORT_URL, SCAN_TOOL, FAIL_WORKFLOW, SCAN_MESSAGE, DETAILED_RESULTS } = process.env;
-          const script = require(`${{ github.action_path }}/../../scripts/post-job-summary.js`);
-          await script({github, context, core});
+    # - name: Post Summary
+    #   uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+    #   if: ${{inputs.generate_job_summary == 'true' }}
+    #   env:
+    #     RESULTS_INPUT_TYPE: ${{ inputs.results_input_type || 'raw' }}
+    #     RESULTS_RAW: 'FAIL SCAN=${{ steps.check_vulnerabilities_wiz_container.outputs.fail_workflow }}: Scan Results: ${{  steps.wiz-container-scan.outcome }}'
+    #     RESULTS_FILE: 'wiz-container-results.txt'
+    #     REPORT_URL: ${{ steps.upload-wiz_container-report.outputs.artifact-url || '' }}
+    #     SCAN_TOOL: 'Wiz Container'
+    #     FAIL_WORKFLOW: ${{ steps.check_vulnerabilities_wiz_container.outputs.fail_workflow || '' }}
+    #     SCAN_MESSAGE: ${{ steps.check_vulnerabilities_wiz_container.outputs.wiz_container_scan_message || '' }}
+    #     DETAILED_RESULTS: ${{ inputs.detailed_results || 'false' }}
+    #   with:
+    #     github-token: ${{ inputs.gh_token || github.token }}
+    #     script: |
+    #       const { GITHUB_WORKSPACE, RESULTS_INPUT_TYPE, RESULTS_FILE, RESULTS_RAW, REPORT_URL, SCAN_TOOL, FAIL_WORKFLOW, SCAN_MESSAGE, DETAILED_RESULTS } = process.env;
+    #       const script = require(`${{ github.action_path }}/../../scripts/post-job-summary.js`);
+    #       await script({github, context, core});
 
 
-    #  Create a comment on the PR with the scan results
-    - name: Create Comment
-      uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
-      if: ${{ github.event_name == 'pull_request' && inputs.generate_pr_comment == 'true' }}
-      env:
-        RESULTS_INPUT_TYPE: ${{ inputs.results_input_type || 'raw' }}
-        RESULTS_RAW: 'FAIL SCAN=${{ steps.check_vulnerabilities_wiz_container.outputs.fail_workflow }}: Scan Results: ${{  steps.wiz-container-scan.outcome }}'
-        RESULTS_FILE: 'wiz-container-results.txt'
-        REPORT_URL: ${{ steps.upload-wiz-report.outputs.artifact-url || '' }}
-        SCAN_TOOL: 'Wiz Container'
-        FAIL_WORKFLOW: ${{ steps.check_vulnerabilities_wiz_container.outputs.fail_workflow || '' }}
-        SCAN_MESSAGE: ${{ steps.check_vulnerabilities_wiz_container.outputs.wiz_container_scan_message || '' }}
-        DETAILED_RESULTS: ${{ inputs.detailed_results || 'false' }}
-      with:
-        github-token: ${{ inputs.gh_token || github.token }}
-        script: |
-          const { GITHUB_WORKSPACE, RESULTS_INPUT_TYPE, RESULTS_FILE, RESULTS_RAW, REPORT_URL, SCAN_TOOL, FAIL_WORKFLOW, SCAN_MESSAGE, DETAILED_RESULTS} = process.env;
-          const script = require(`${{ github.action_path }}/../../scripts/post-pr-comment.js`);
-          await script({github, context, core});
+    # #  Create a comment on the PR with the scan results
+    # - name: Create Comment
+    #   uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+    #   if: ${{ github.event_name == 'pull_request' && inputs.generate_pr_comment == 'true' }}
+    #   env:
+    #     RESULTS_INPUT_TYPE: ${{ inputs.results_input_type || 'raw' }}
+    #     RESULTS_RAW: 'FAIL SCAN=${{ steps.check_vulnerabilities_wiz_container.outputs.fail_workflow }}: Scan Results: ${{  steps.wiz-container-scan.outcome }}'
+    #     RESULTS_FILE: 'wiz-container-results.txt'
+    #     REPORT_URL: ${{ steps.upload-wiz-report.outputs.artifact-url || '' }}
+    #     SCAN_TOOL: 'Wiz Container'
+    #     FAIL_WORKFLOW: ${{ steps.check_vulnerabilities_wiz_container.outputs.fail_workflow || '' }}
+    #     SCAN_MESSAGE: ${{ steps.check_vulnerabilities_wiz_container.outputs.wiz_container_scan_message || '' }}
+    #     DETAILED_RESULTS: ${{ inputs.detailed_results || 'false' }}
+    #   with:
+    #     github-token: ${{ inputs.gh_token || github.token }}
+    #     script: |
+    #       const { GITHUB_WORKSPACE, RESULTS_INPUT_TYPE, RESULTS_FILE, RESULTS_RAW, REPORT_URL, SCAN_TOOL, FAIL_WORKFLOW, SCAN_MESSAGE, DETAILED_RESULTS} = process.env;
+    #       const script = require(`${{ github.action_path }}/../../scripts/post-pr-comment.js`);
+    #       await script({github, context, core});
 
 
-    #  Fail the workflow if vulnerabilities are found
-    - name: Fail Workflow
-      if: ${{ steps.check_vulnerabilities_wiz_container.outputs.fail_workflow == 'true' &&  inputs.wiz_fail_build == 'true' }}
-      run: | 
-        echo "SCAN MESSAGE: ${{ steps.check_vulnerabilities_wiz_container.outputs.wiz_container_scan_message }} SCAN EXIT CODE: ${{ steps.wiz-container-scan.outputs.exitcode }}"
-        exit ${{ steps.wiz-container-scan.outputs.exitcode }}
-      shell: bash
+    # #  Fail the workflow if vulnerabilities are found
+    # - name: Fail Workflow
+    #   if: ${{ steps.check_vulnerabilities_wiz_container.outputs.fail_workflow == 'true' &&  inputs.wiz_fail_build == 'true' }}
+    #   run: | 
+    #     echo "SCAN MESSAGE: ${{ steps.check_vulnerabilities_wiz_container.outputs.wiz_container_scan_message }} SCAN EXIT CODE: ${{ steps.wiz-container-scan.outputs.exitcode }}"
+    #     exit ${{ steps.wiz-container-scan.outputs.exitcode }}
+    #   shell: bash
