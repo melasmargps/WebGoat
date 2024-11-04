@@ -1,0 +1,194 @@
+# yaml-language-server: $schema=../schema/github-action.json
+
+name: "Wiz Container Image Scan"
+description: "Perform a Wiz Container Image Scan"
+inputs:
+  wiz_client_id:
+    description: "Wiz service account client ID"
+    required: true
+  wiz_client_secret:
+    description: "Wiz service account client Secret"
+    required: true
+  wiz_scan_policy:
+    description: "Wiz Scan Policy"
+    required: false
+    default: "Default secrets policy,Default sensitive data policy,Default vulnerabilities policy"
+  wiz_severity_threshold:
+    description: "Severity Threshold for failing the build/run"
+    required: false
+    default: high
+  wiz_working_directory:
+    description: "Wiz Testing Directory"
+    required: false
+    default: ${{ github.workspace }}
+  wiz_additional_arguments:
+    description: "Any additional arguments to pass to the Wiz-cli"
+    required: false
+    default: ''
+  wiz_fail_build:
+    description: "Fail build if findings violate threshold and severity"
+    required: false
+    default: 'true'
+  wiz_container_image:
+    description: "Container Image to Scan with Wiz"
+    required: true
+    default: ''
+  generate_pr_comment:
+    description: "Option to generate a PR comment"
+    required: false
+    default: 'true'
+  detailed_results:
+    description: "Option to post scan details on comment/pr comment"
+    required: false
+    default: 'false'
+  generate_job_summary:
+    description: "Option to generate a job summary"
+    required: false
+    default: 'true'
+    
+outputs:
+  fail_workflow:
+    description: 'True/False - workflow failed'
+    value: ${{ steps.check_vulnerabilities_wiz_container.outputs.fail_workflow }}
+  report_url:
+    description: 'Artifact Report URL'
+    value: ${{ steps.upload-wiz_container-report.outputs.artifact-url }}
+
+
+permissions:
+  contents: read
+  pull-requests: write
+  
+runs:
+  using: "composite"
+  steps:
+
+    #  Install Wiz CLI tools
+    - name: Install Wiz
+      working-directory: ${{ inputs.wiz_working_directory }}
+      run: curl -o wizcli https://wizcli.app.wiz.io/latest/wizcli && chmod +x wizcli
+      shell: bash
+
+    #  Authenticate with Wiz
+    - name: Authenticate and run Wiz test
+      run: |
+        ./wizcli auth --id ${{ inputs.wiz_client_id }} --secret ${{ inputs.wiz_client_secret }}
+      working-directory: ${{ inputs.wiz_working_directory }}
+      continue-on-error: false
+      shell: bash
+
+    #  Run Wiz Container scan
+    - name: Wiz Container Scan
+      id: wiz-container-scan
+      working-directory: ${{ inputs.wiz_working_directory }}
+      continue-on-error: true
+      run: |
+        set +e
+        ./wizcli docker scan --image ${{ inputs.wiz_container_image }} --secrets  --no-color -o result,human,true -o wiz-container-results.json,json,true --policy "${{ inputs.wiz_scan_policy }}" --policy-hits-only ${{ inputs.wiz_additional_arguments }} > wiz-container-results.txt
+        exitcode="$?"
+        echo "exitcode=$exitcode" >> $GITHUB_OUTPUT
+        echo "$exitcode"
+        cat wiz-container-results.txt
+      shell: bash
+
+    #  Check for vulnerabilities & generate report
+    - name: Check vulnerabilities
+      id: check_vulnerabilities_wiz_container
+      working-directory: ${{ inputs.wiz_working_directory }}
+      run: |
+        # Check if there are vulnerabilities in the Wiz Container Scan
+        case ${{ steps.wiz-container-scan.outputs.exitcode }} in
+          0)
+            wiz_container_msg="wiz_container scan completed successfully. No vulnerabilities found."
+            echo "fail_workflow=false" >> "$GITHUB_OUTPUT"
+            echo wiz_container_scan_message=$wiz_container_msg  >> "$GITHUB_OUTPUT"
+            ;;
+          1)
+            wiz_container_msg="Wiz Container scan failed. An error occured (timeout, interuption, network) try to re-run"
+            echo wiz_container_scan_message=$wiz_container_msg  >> "$GITHUB_OUTPUT"
+            echo "fail_workflow=true" >> "$GITHUB_OUTPUT"
+            ;;
+          2)
+            wiz_container_msg="Wiz Container scan failed. Invalid Command or arguments provided"
+            echo wiz_container_scan_message=$wiz_container_msg  >> "$GITHUB_OUTPUT"
+            echo "fail_workflow=true" >> "$GITHUB_OUTPUT"
+            ;;
+          3)
+            wiz_container_msg="Wiz Container scan failed. An authentication error occured, please check your credentials"
+            echo wiz_container_scan_message=$wiz_container_msg  >> "$GITHUB_OUTPUT"
+            echo "fail_workflow=true" >> "$GITHUB_OUTPUT"
+            ;;
+          4)
+            wiz_container_msg="Wiz Container scan failed. Policy Violation"
+            echo wiz_container_scan_message=$wiz_container_msg  >> "$GITHUB_OUTPUT"
+            echo "fail_workflow=true" >> "$GITHUB_OUTPUT"
+            ;;
+          *)
+            wiz_container_msg="Wiz Container failed with an unknown exit code: ${{ steps.wiz_container-scan.outputs.exitcode }}"
+            echo wiz_container_scan_message=$wiz_container_msg  >> "$GITHUB_OUTPUT"
+            echo "fail_workflow=true" >> "$GITHUB_OUTPUT"
+            ;;
+        esac
+        echo "$wiz_container_msg"
+      shell: bash
+
+    #  Upload Wiz HTML report
+    - uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+      name: Upload Scan Report
+      if: ${{ steps.check_vulnerabilities_wiz_container.outputs.fail_workflow == 'true' }}
+      id: upload-wiz_container-report
+      with:
+        name: wiz-scan-results
+        path: |
+          wiz-container-results.json
+          wiz-container-results.txt
+        if-no-files-found: ignore
+    #  Create a Job Summary with the scan results
+    - name: Post Summary
+      uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+      if: ${{inputs.generate_job_summary == 'true' }}
+      env:
+        RESULTS_INPUT_TYPE: ${{ inputs.results_input_type || 'raw' }}
+        RESULTS_RAW: 'FAIL SCAN=${{ steps.check_vulnerabilities_wiz_container.outputs.fail_workflow }}: Scan Results: ${{  steps.wiz-container-scan.outcome }}'
+        RESULTS_FILE: 'wiz-container-results.txt'
+        REPORT_URL: ${{ steps.upload-wiz_container-report.outputs.artifact-url || '' }}
+        SCAN_TOOL: 'Wiz Container'
+        FAIL_WORKFLOW: ${{ steps.check_vulnerabilities_wiz_container.outputs.fail_workflow || '' }}
+        SCAN_MESSAGE: ${{ steps.check_vulnerabilities_wiz_container.outputs.wiz_container_scan_message || '' }}
+        DETAILED_RESULTS: ${{ inputs.detailed_results || 'false' }}
+      with:
+        github-token: ${{ inputs.gh_token || github.token }}
+        script: |
+          const { GITHUB_WORKSPACE, RESULTS_INPUT_TYPE, RESULTS_FILE, RESULTS_RAW, REPORT_URL, SCAN_TOOL, FAIL_WORKFLOW, SCAN_MESSAGE, DETAILED_RESULTS } = process.env;
+          const script = require(`${{ github.action_path }}/../../scripts/post-job-summary.js`);
+          await script({github, context, core});
+
+
+    #  Create a comment on the PR with the scan results
+    - name: Create Comment
+      uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+      if: ${{ github.event_name == 'pull_request' && inputs.generate_pr_comment == 'true' }}
+      env:
+        RESULTS_INPUT_TYPE: ${{ inputs.results_input_type || 'raw' }}
+        RESULTS_RAW: 'FAIL SCAN=${{ steps.check_vulnerabilities_wiz_container.outputs.fail_workflow }}: Scan Results: ${{  steps.wiz-container-scan.outcome }}'
+        RESULTS_FILE: 'wiz-container-results.txt'
+        REPORT_URL: ${{ steps.upload-wiz-report.outputs.artifact-url || '' }}
+        SCAN_TOOL: 'Wiz Container'
+        FAIL_WORKFLOW: ${{ steps.check_vulnerabilities_wiz_container.outputs.fail_workflow || '' }}
+        SCAN_MESSAGE: ${{ steps.check_vulnerabilities_wiz_container.outputs.wiz_container_scan_message || '' }}
+        DETAILED_RESULTS: ${{ inputs.detailed_results || 'false' }}
+      with:
+        github-token: ${{ inputs.gh_token || github.token }}
+        script: |
+          const { GITHUB_WORKSPACE, RESULTS_INPUT_TYPE, RESULTS_FILE, RESULTS_RAW, REPORT_URL, SCAN_TOOL, FAIL_WORKFLOW, SCAN_MESSAGE, DETAILED_RESULTS} = process.env;
+          const script = require(`${{ github.action_path }}/../../scripts/post-pr-comment.js`);
+          await script({github, context, core});
+
+
+    #  Fail the workflow if vulnerabilities are found
+    - name: Fail Workflow
+      if: ${{ steps.check_vulnerabilities_wiz_container.outputs.fail_workflow == 'true' &&  inputs.wiz_fail_build == 'true' }}
+      run: | 
+        echo "SCAN MESSAGE: ${{ steps.check_vulnerabilities_wiz_container.outputs.wiz_container_scan_message }} SCAN EXIT CODE: ${{ steps.wiz-container-scan.outputs.exitcode }}"
+        exit ${{ steps.wiz-container-scan.outputs.exitcode }}
+      shell: bash
