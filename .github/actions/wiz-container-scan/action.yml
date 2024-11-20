@@ -194,3 +194,5 @@ runs:
     #     echo "SCAN MESSAGE: ${{ steps.check_vulnerabilities_wiz_container.outputs.wiz_container_scan_message }} SCAN EXIT CODE: ${{ steps.wiz-container-scan.outputs.exitcode }}"
     #     exit ${{ steps.wiz-container-scan.outputs.exitcode }}
     #   shell: bash
+
+    
