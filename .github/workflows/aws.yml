@@ -48,10 +48,8 @@ jobs:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         IMAGE_TAG: ${{ github.sha }}
       run: |
-        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:${{ env.CONTAINER_NAME }} .
-        docker tag $ECR_REGISTRY/$ECR_REPOSITORY:${{ env.CONTAINER_NAME }} $ECR_REGISTRY/$ECR_REPOSITORY:latest
-        echo "image-name=$ECR_REGISTRY/$ECR_REPOSITORY:${{ env.CONTAINER_NAME }}" >> $GITHUB_OUTPUT
-
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        echo "image-name=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
         
     - name: Run Wiz Container Image Scan
       uses: ./.github/actions/wiz-container-scan
@@ -69,14 +67,12 @@ jobs:
     - name: Push image to Amazon ECR
       id: push-image
       env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}
       run: |
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:${{ env.CONTAINER_NAME }}
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:${{ env.CONTAINER_NAME }}" >> $GITHUB_OUTPUT
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
     - name: Use WizCLI to Tag Image
       run: |
         ./wizcli docker tag --image ${{ steps.build-image.outputs.image-name }}
-        
