@@ -76,5 +76,3 @@ jobs:
     - name: Use WizCLI to Tag Image
       run: |
         ./wizcli docker tag --image ${{ steps.build-image.outputs.image-name }}
-
-        
